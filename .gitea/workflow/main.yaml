@@ -1,0 +1,30 @@
+name: DevSecOps Pipeline
+
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+jobs:
+  secret-scan:
+    uses: holdingforce/Test/.gitea/workflows/secret-scan.yml@main
+    secrets: inherit
+
+  sast-sbom:
+    needs: secret-scan
+    if: github.ref == 'refs/heads/develop'
+    uses: holdingforce/Test/.gitea/workflows/sast-scan-sbom.yml@main
+    secrets: inherit
+
+  build-deploy:
+    needs: sast-sbom
+    if: github.ref == 'refs/heads/main'
+    uses: holdingforce/Test/.gitea/workflows/MSDevlop.yaml@main
+    secrets: inherit
+
+  dast-k6:
+    needs: build-deploy
+    if: github.ref == 'refs/heads/main'
+    uses: holdingforce/Test/.gitea/workflows/dast-scan-k6.yaml@main
+    secrets: inherit
