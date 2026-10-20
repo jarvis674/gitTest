@@ -13,7 +13,7 @@ jobs:
 
   sast-sbom:
     needs: secret-scan
-    if: github.ref == 'refs/heads/develop'
+    if: always() && github.ref == 'refs/heads/develop'
     uses: holdingforce/Test/.gitea/workflows/sast-scan-sbom.yml@main
     secrets: inherit
 
