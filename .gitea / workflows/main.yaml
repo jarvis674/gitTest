@@ -11,17 +11,17 @@ jobs:
     secrets: inherit
 
   sast-sbom:
-    needs: run-secret-scan
+    needs: secret-scan
     uses: holdingforce/Test/.gitea/workflows/sast-scan-sbom.yml@main
     secrets: inherit
 
   # 3. 建置與部署至 IIS (MSBuild & IIS Deploy)
   build-deploy:
-    needs: run-sast-sbom
+    needs: sast-sbom
     uses: holdingforce/Test/.gitea/workflows/MSDevlop.yaml@main
     secrets: inherit
 
   dast-k6:
-    needs: run-build-deploy
+    needs: build-deploy
     uses: holdingforce/Test/.gitea/workflows/dast-scan-k6.yaml@main
     secrets: inherit
