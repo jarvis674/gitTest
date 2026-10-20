@@ -1,69 +1,30 @@
-# GitHub reads .github/workflows, not .gitea/workflows.
-# feature/* runs Gitleaks. develop and main still only print their gate.
-# ASCII only. PowerShell 5.1 misreads UTF-8 scripts that have no BOM.
-
-name: Branch routing
+name: DevSecOps Pipeline
 
 on:
   push:
     branches:
-      - "**"
+      - '**'
   workflow_dispatch:
 
 jobs:
   secret-scan:
-    if: startsWith(github.ref, 'refs/heads/feature/')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+    uses: holdingforce/Test/.gitea/workflows/secret-scan.yml@main
+    secrets: inherit
 
-      - name: Run Gitleaks on Windows
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Stop"
-          $tool = $env:GITLEAKS_PATH
-          if ([string]::IsNullOrWhiteSpace($tool) -or -not (Test-Path -LiteralPath $tool)) {
-            $tool = "C:\Windows\gitleaks_8.30.1_windows_x64\gitleaks.exe"
-          }
-          if (-not (Test-Path -LiteralPath $tool)) {
-            $cmd = Get-Command gitleaks -ErrorAction SilentlyContinue
-            if ($cmd) { $tool = $cmd.Source }
-          }
-          if (-not (Test-Path -LiteralPath $tool)) {
-            Write-Error "gitleaks.exe was not found. Set GITLEAKS_PATH or install gitleaks."
-            exit 1
-          }
-          Write-Host "Using $tool"
-          & $tool detect --no-git --source . --verbose --redact
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Run Gitleaks on Linux
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          set -eu
-          if ! command -v gitleaks >/dev/null 2>&1; then
-            version="8.30.1"
-            archive="gitleaks_${version}_linux_x64.tar.gz"
-            curl -sSfL -o "$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}"
-            tar -xzf "$archive" gitleaks
-            chmod +x gitleaks
-            sudo mv gitleaks /usr/local/bin/gitleaks
-          fi
-          gitleaks detect --no-git --source . --verbose --redact
-
-  sast-sbom-sca:
+  sast-sbom:
+    needs: secret-scan
     if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    steps:
-      - name: SAST SBOM SCA gate
-        run: echo "Branch ${{ github.ref_name }} runs SAST, SBOM, and SCA."
+    uses: holdingforce/Test/.gitea/workflows/sast-scan-sbom.yml@main
+    secrets: inherit
+
+  build-deploy:
+    needs: sast-sbom
+    if: github.ref == 'refs/heads/main'
+    uses: holdingforce/Test/.gitea/workflows/MSDevlop.yaml@main
+    secrets: inherit
 
   dast-k6:
+    needs: build-deploy
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: DAST and k6 gate
-        run: echo "Branch ${{ github.ref_name }} runs DAST and k6."
+    uses: holdingforce/Test/.gitea/workflows/dast-scan-k6.yaml@main
+    secrets: inherit
