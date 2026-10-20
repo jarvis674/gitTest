@@ -1,30 +1,33 @@
-name: DevSecOps Pipeline
+# Simulation only. GitHub reads .github/workflows, not .gitea/workflows.
+# feature/* runs secret scan, develop runs SAST/SBOM/SCA, main runs DAST and k6.
+# These jobs only print the selected gate. They do not call the Gitea templates.
+
+name: Branch routing
 
 on:
   push:
     branches:
-      - '**'
+      - "**"
   workflow_dispatch:
 
 jobs:
   secret-scan:
-    uses: holdingforce/Test/.gitea/workflows/secret-scan.yml@main
-    secrets: inherit
+    if: startsWith(github.ref, 'refs/heads/feature/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Secret scan gate
+        run: echo "Branch ${{ github.ref_name }} runs secret scan."
 
-  sast-sbom:
-    needs: secret-scan
+  sast-sbom-sca:
     if: github.ref == 'refs/heads/develop'
-    uses: holdingforce/Test/.gitea/workflows/sast-scan-sbom.yml@main
-    secrets: inherit
-
-  build-deploy:
-    needs: sast-sbom
-    if: github.ref == 'refs/heads/main'
-    uses: holdingforce/Test/.gitea/workflows/MSDevlop.yaml@main
-    secrets: inherit
+    runs-on: ubuntu-latest
+    steps:
+      - name: SAST SBOM SCA gate
+        run: echo "Branch ${{ github.ref_name }} runs SAST, SBOM, and SCA."
 
   dast-k6:
-    needs: build-deploy
     if: github.ref == 'refs/heads/main'
-    uses: holdingforce/Test/.gitea/workflows/dast-scan-k6.yaml@main
-    secrets: inherit
+    runs-on: ubuntu-latest
+    steps:
+      - name: DAST and k6 gate
+        run: echo "Branch ${{ github.ref_name }} runs DAST and k6."
