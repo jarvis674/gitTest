@@ -1,27 +1,34 @@
-name: Complete DevSecOps Pipeline
+name: DevSecOps Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - '**'
   workflow_dispatch:
 
 jobs:
+  # 1. 機密資訊掃描 (無論是 main 還是 feature/a 都會執行)
   secret-scan:
     uses: holdingforce/Test/.gitea/workflows/secret-scan.yml@main
     secrets: inherit
 
+  # 2. 靜態安全掃描與 SBOM (限制只有 main 分支才執行)
   sast-sbom:
     needs: secret-scan
+    if: github.ref == 'refs/heads/main'  # 關鍵：僅在 main 分支觸發
     uses: holdingforce/Test/.gitea/workflows/sast-scan-sbom.yml@main
     secrets: inherit
 
-  # 3. 建置與部署至 IIS (MSBuild & IIS Deploy)
+  # 3. 建置與部署至 IIS (限制只有 main 分支才執行)
   build-deploy:
     needs: sast-sbom
+    if: github.ref == 'refs/heads/main'  # 關鍵：僅在 main 分支觸發
     uses: holdingforce/Test/.gitea/workflows/MSDevlop.yaml@main
     secrets: inherit
 
+  # 4. 動態安全掃描與 k6 (限制只有 main 分支才執行)
   dast-k6:
     needs: build-deploy
+    if: github.ref == 'refs/heads/main'  # 關鍵：僅在 main 分支觸發
     uses: holdingforce/Test/.gitea/workflows/dast-scan-k6.yaml@main
     secrets: inherit
