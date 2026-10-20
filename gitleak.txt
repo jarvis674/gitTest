@@ -1,8 +1,0 @@
-# AWS Access Key 範例
-AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
-
-# GitHub Personal Access Token 範例
-GITHUB_TOKEN=ghp_1234567890abcdefghijklmnopqrstuvwxyz
-
-# Generic API Key 範例
-api_key = "1234567890abcdef1234567890abcdef"
